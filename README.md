@@ -24,7 +24,7 @@ Este curso está diseñado para guiarte desde los **fundamentos de LangChain** h
 
 ---
 
-## Estructura del Contenido (Work in progess!!)
+## Estructura del Contenido (Work in progress!!)
 
 ### Serie 1: Básico
 En esta primera serie, sentarás las bases para entender LangChain y aprenderás:
