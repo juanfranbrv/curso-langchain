@@ -24,12 +24,11 @@ Este curso está diseñado para guiarte desde los **fundamentos de LangChain** h
 
 ---
 
-## Estructura del Contenido
+## Estructura del Contenido (in Work !!)
 
 ### Serie 1: Básico
 En esta primera serie, sentarás las bases para entender LangChain y aprenderás:
-- Fundamentos de la librería LangChain
-- Configuración inicial del entorno de desarrollo
+- ¿ Que es Langchain ? Configuración inicial del entorno [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/juanfranbrv/curso-langchain/blob/main/langchain-01.ipynb#scrollTo=n4sbGgy_lcrD)
 - Primeros Chains y uso básico de prompts
 - Integración con herramientas y agentes sencillos
 
