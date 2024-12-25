@@ -8,20 +8,22 @@
         - Importancia y casos de uso de las LLMs.
         - Instalación y configuración de credenciales (OpenAI, HuggingFace, etc.).
         - Primer “hola mundo” haciendo una llamada básica a un LLM con LangChain.
-2. **Primeros Pasos con Chains**
-    
-    - **Objetivo**: Familiarizarse con el concepto de _Chain_ y cómo encadenar llamadas a modelos de lenguaje.
-    - **Puntos clave**:
-        - Uso de `LLMChain`.
-        - Encadenar prompts simples y ver los resultados.
-        - Ejemplo práctico: generar un texto corto con parámetros dinámicos.
-3. **Prompts e Ingeniería de Prompts**
+
+2. **Prompts e Ingeniería de Prompts**
     
     - **Objetivo**: Entender la importancia de los prompts y cómo diseñarlos eficientemente.
     - **Puntos clave**:
         - Uso de `PromptTemplate` para crear prompts reutilizables.
         - Buenas prácticas de _prompt engineering_ (ej. few-shot, instrucciones claras).
         - Ejemplo práctico: crear prompts efectivos para diferentes tareas.
+3. **Primeros Pasos con Chains**
+    
+    - **Objetivo**: Familiarizarse con el concepto de _Chain_ y cómo encadenar llamadas a modelos de lenguaje.
+    - **Puntos clave**:
+        - Uso de `LLMChain`.
+        - Encadenar prompts simples y ver los resultados.
+        - Ejemplo práctico: generar un texto corto con parámetros dinámicos.
+
 4. **Herramientas (Tools) y Agentes Básicos**
     
     - **Objetivo**: Conocer cómo LangChain maneja “herramientas” para realizar acciones adicionales y cómo los _Agents_ las emplean para resolver tareas.
