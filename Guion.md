@@ -111,3 +111,5 @@
         - Diseño de la arquitectura (memoria + vector store + prompts + herramientas).
         - Ejecución de pruebas y refinamiento de prompts.
         - Lecciones aprendidas y próximos pasos.
+---
+? Añadir algunos retos o algun tipo de ejercicio al cuadernocomo por ejemplo modifica, crea ...
