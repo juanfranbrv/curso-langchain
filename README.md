@@ -93,20 +93,19 @@ Sigue estos pasos para clonar el repositorio en tu ordenador:
 2.  Navega al directorio donde deseas clonar el repositorio usando el comando `cd`. Por ejemplo:
     
       ```
-      cd ruta/de/tu/directorio
-      
+      cd ruta/de/tu/directorio      
       ```
     
 3.  Ejecuta el siguiente comando para clonar el repositorio:
     
     ```
     git clone https://github.com/juanfranbrv/curso-langchain.git
-
     ```
     
 4.  Una vez completado el proceso, navega al directorio del repositorio clonado:
     
-    cd curso-langchain
+    ```cd curso-langchain
+    ```
     
 5.  ¡Listo! Ahora tienes una copia local del repositorio en tu ordenador.
     
