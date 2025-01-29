@@ -84,7 +84,7 @@ Además, para las secciones más avanzadas, se sugiere:
 5. Cuando concluyas un nivel, pasa al siguiente para seguir aprendiendo de forma escalonada.  
 
 
-## Cómo clonar el Repositorio desde el Terminal
+### Cómo clonar el Repositorio desde el Terminal
 
 Sigue estos pasos para clonar el repositorio en tu ordenador:
 
@@ -111,7 +111,7 @@ Sigue estos pasos para clonar el repositorio en tu ordenador:
 5.  ¡Listo! Ahora tienes una copia local del repositorio en tu ordenador.
     
 
-## Cómo descargar el Repositorio como Archivo ZIP
+### Cómo descargar el Repositorio como Archivo ZIP
 
 Si prefieres descargar el repositorio como un archivo ZIP:
 
