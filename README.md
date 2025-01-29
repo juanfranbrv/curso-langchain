@@ -75,7 +75,16 @@ Además, para las secciones más avanzadas, se sugiere:
 ## Cómo Usar Este Repositorio
 1. **Clona o descarga** este repositorio en tu ordenador o abre los notebooks directamente en Google Colab.
 
-### Clonar el Repositorio desde el Terminal
+2. Cada serie cuenta con sus propios subdirectorios que contienen los notebooks (Colabs) numerados en orden progresivo.  
+
+3. **Lee la descripción** al inicio de cada notebook para entender los objetivos, requisitos y pasos a seguir.  
+
+4. **Ejecuta los ejemplos** propuestos y experimenta con tus propios casos de uso.  
+
+5. Cuando concluyas un nivel, pasa al siguiente para seguir aprendiendo de forma escalonada.  
+
+
+## Clonar el Repositorio desde el Terminal
 
 Sigue estos pasos para clonar el repositorio en tu ordenador:
 
@@ -96,7 +105,7 @@ Sigue estos pasos para clonar el repositorio en tu ordenador:
 5.  ¡Listo! Ahora tienes una copia local del repositorio en tu ordenador.
     
 
-### Descargar el Repositorio como Archivo ZIP
+## Descargar el Repositorio como Archivo ZIP
 
 Si prefieres descargar el repositorio como un archivo ZIP:
 
@@ -112,10 +121,7 @@ Si prefieres descargar el repositorio como un archivo ZIP:
 
 
 
-2. Cada serie cuenta con sus propios subdirectorios que contienen los notebooks (Colabs) numerados en orden progresivo.
-3. **Lee la descripción** al inicio de cada notebook para entender los objetivos, requisitos y pasos a seguir.
-4. **Ejecuta los ejemplos** propuestos y experimenta con tus propios casos de uso.
-5. Cuando concluyas un nivel, pasa al siguiente para seguir aprendiendo de forma escalonada.
+
 
 ---
 
