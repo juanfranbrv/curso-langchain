@@ -104,7 +104,8 @@ Sigue estos pasos para clonar el repositorio en tu ordenador:
     
 4.  Una vez completado el proceso, navega al directorio del repositorio clonado:
     
-    ```cd curso-langchain
+    ```
+    cd curso-langchain
     ```
     
 5.  ¡Listo! Ahora tienes una copia local del repositorio en tu ordenador.
