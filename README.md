@@ -74,6 +74,44 @@ Además, para las secciones más avanzadas, se sugiere:
 
 ## Cómo Usar Este Repositorio
 1. **Clona o descarga** este repositorio en tu ordenador o abre los notebooks directamente en Google Colab.
+
+### Clonar el Repositorio desde el Terminal
+
+Sigue estos pasos para clonar el repositorio en tu ordenador:
+
+1.  **Abre tu terminal** (Linux/Mac) o **Git Bash** (Windows).
+    
+2.  Navega al directorio donde deseas clonar el repositorio usando el comando `cd`. Por ejemplo:
+    
+      cd ruta/de/tu/directorio
+    
+3.  Ejecuta el siguiente comando para clonar el repositorio:
+    
+    git clone https://github.com/juanfranbrv/curso-langchain.git
+    
+4.  Una vez completado el proceso, navega al directorio del repositorio clonado:
+    
+    cd curso-langchain
+    
+5.  ¡Listo! Ahora tienes una copia local del repositorio en tu ordenador.
+    
+
+### Descargar el Repositorio como Archivo ZIP
+
+Si prefieres descargar el repositorio como un archivo ZIP:
+
+1.  Visita la página del repositorio: [https://github.com/juanfranbrv/curso-langchain](https://github.com/juanfranbrv/curso-langchain).
+    
+2.  Haz clic en el botón verde **"Code"** en la parte superior derecha de la página.
+    
+3.  Selecciona **"Download ZIP"** en el menú desplegable.
+    
+4.  Una vez descargado, extrae el archivo ZIP en tu directorio preferido.
+
+
+
+
+
 2. Cada serie cuenta con sus propios subdirectorios que contienen los notebooks (Colabs) numerados en orden progresivo.
 3. **Lee la descripción** al inicio de cada notebook para entender los objetivos, requisitos y pasos a seguir.
 4. **Ejecuta los ejemplos** propuestos y experimenta con tus propios casos de uso.
