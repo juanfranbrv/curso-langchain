@@ -1,0 +1,701 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "toc_visible": true,
+      "authorship_tag": "ABX9TyMaQdyx69ekkVK5Z+SiKoQ/",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/juanfranbrv/curso-langchain/blob/main/9999.%20Ejercicios\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Soluciones a los ejercicios cuaderno **3: Output parsers**\n",
+        "---\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "iDVbCGW6nUc_"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# **Preparando el entorno del cuaderno**\n",
+        "---"
+      ],
+      "metadata": {
+        "id": "pWIl4MBen6zv"
+      }
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "ihaYmy1rgga_"
+      },
+      "outputs": [],
+      "source": [
+        "%%capture --no-stderr\n",
+        "\n",
+        "# Importar la librería `userdata` de Google Colab.\n",
+        "# Esta librería se utiliza para acceder a datos de usuario almacenados de forma segura en el entorno de Colab.\n",
+        "from google.colab import userdata\n",
+        "\n",
+        "# Obtener las claves API de diferentes servicios desde el almacenamiento seguro de Colab.\n",
+        "OPENAI_API_KEY=userdata.get('OPENAI_API_KEY')\n",
+        "GROQ_API_KEY=userdata.get('GROQ_API_KEY')\n",
+        "GOOGLE_API_KEY=userdata.get('GOOGLE_API_KEY')\n",
+        "HUGGINGFACEHUB_API_TOKEN=userdata.get('HUGGINGFACEHUB_API_TOKEN')\n",
+        "\n",
+        "# Instalar las librerías necesarias usando pip.\n",
+        "# El flag `-qU` instala en modo silencioso (`-q`) y actualiza las librerías si ya están instaladas (`-U`).\n",
+        "%pip install langchain -qU  # Instalar la librería principal de LangChain.\n",
+        "\n",
+        "# Instalar las integraciones de LangChain con diferentes proveedores de LLMs.\n",
+        "%pip install langchain-openai -qU\n",
+        "%pip install langchain-groq -qU\n",
+        "%pip install langchain-google-genai -qU\n",
+        "%pip install langchain-huggingface -qU\n",
+        "\n",
+        "# Instalamos Rich para mejorar la salida\n",
+        "%pip install rich -qU\n",
+        "\n",
+        "# Importar las clases necesarias de LangChain para crear plantillas de prompt.\n",
+        "# `ChatPromptTemplate` es la clase base para plantillas de chat.\n",
+        "# `SystemMessagePromptTemplate` se usa para mensajes del sistema (instrucciones iniciales).\n",
+        "# `HumanMessagePromptTemplate` se usa para mensajes del usuario.\n",
+        "from langchain.prompts import PromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate\n",
+        "\n",
+        "# Importar las clases para interactuar con los diferentes LLMs a través de LangChain.\n",
+        "from langchain_openai import ChatOpenAI\n",
+        "from langchain_groq import ChatGroq\n",
+        "from langchain_google_genai import ChatGoogleGenerativeAI\n",
+        "from langchain_huggingface import HuggingFaceEndpoint\n",
+        "\n",
+        "# Importamos las librerias para formatear mejor la salida\n",
+        "from IPython.display import Markdown, display\n",
+        "from rich import print as rprint"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# **👨🏻‍🏫 Ejercicio 1: Extractor de Información de Películas**\n",
+        "\n",
+        "**Objetivo**: Crear un sistema que extraiga información estructurada sobre películas a partir de una consulta simple.\n",
+        "\n",
+        "**Descripción**: Implementa un programa utilizando LangChain y `StructuredOutputParser` que tome como entrada el nombre de una película y genere una ficha técnica con información relevante como título, director, género, año, puntuación y resumen.\n",
+        "\n",
+        "**Requisitos**:\n",
+        "\n",
+        "1. Utilizar `ResponseSchema` para definir la estructura de los campos a extraer\n",
+        "2. Implementar un `StructuredOutputParser` para procesar la respuesta del modelo\n",
+        "3. Crear un `PromptTemplate` que incluya las instrucciones de formato\n",
+        "4. Integrar el sistema con un modelo de lenguaje (ChatOpenAI o ChatGroq)\n",
+        "5. Procesar y mostrar la información de manera estructurada\n",
+        "\n",
+        "**Entregable**: Un script de Python que, al ejecutarse con el nombre de una película como entrada, genere una ficha técnica estructurada con la información solicitada.\n",
+        "\n",
+        "**Nivel**: Medio\n",
+        "\n",
+        "**Aplicación práctica**: Este sistema puede ser útil para crear bases de datos de películas, generar fichas técnicas automáticas o construir sistemas de recomendación basados en atributos específicos de las películas.\n",
+        "\n",
+        "### Resuelve el ejerciccio en este cuaderno. Una solucion la puedes encontrar en el repositorio de esta serie de cuadernos.\n",
+        "https://github.com/juanfranbrv/curso-langchain"
+      ],
+      "metadata": {
+        "id": "vKVE9E5QJEmW"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from langchain.output_parsers import StructuredOutputParser, ResponseSchema\n",
+        "\n",
+        "#Creamos un esquema de respuesta (ResponseSchema) para cada campo que queremos extraer:\n",
+        "esquema_respuesta = [\n",
+        "            ResponseSchema(name=\"titulo\", description=\"Titulo de la película.\"),\n",
+        "            ResponseSchema(name=\"director\", description=\"Nombre del director de la película\"),\n",
+        "            ResponseSchema(name=\"genero\", description=\"Genero cinematografico de  la pelicula\"),\n",
+        "            ResponseSchema(name=\"año\", description=\"Año de estreno de la película\"),\n",
+        "            ResponseSchema(name=\"puntuacion\", description=\"Número de estrellas 1,2,3,4,5\"),\n",
+        "            ResponseSchema(name=\"resumen\", description=\"Resumen de la crítica de la película\")\n",
+        "                    ]\n",
+        "\n",
+        "# Crear el StructuredOutputParser\n",
+        "output_parser = StructuredOutputParser.from_response_schemas(esquema_respuesta)\n",
+        "\n",
+        "# Obtener el formato de instrucciones del parser\n",
+        "format_instructions = output_parser.get_format_instructions()\n",
+        "format_instructions\n",
+        "\n",
+        "# Crear el prompt\n",
+        "plantilla = \"\"\"\n",
+        "        Genera la siguiente informacion sobre esta {pelicula}:\n",
+        "            Titulo\n",
+        "            Director\n",
+        "            Genero\n",
+        "            Puntuacion\n",
+        "\n",
+        "        solo devuelve la informacion solicitada en el formato indicado\n",
+        "\n",
+        "\n",
+        "        {format_instructions}\n",
+        "        \"\"\"\n",
+        "\n",
+        "# Generar el prompt para el LLM\n",
+        "prompt_template = PromptTemplate(\n",
+        "    template=plantilla,\n",
+        "    input_variables=[\"pelicula\"],\n",
+        "    partial_variables={\"format_instructions\": format_instructions}\n",
+        ")\n",
+        "\n",
+        "pelicula = \"El señor de los anillos\"\n",
+        "prompt = prompt_template.format(pelicula=pelicula)\n",
+        "\n",
+        "\n",
+        "# Instanciamos el modelo (comenta el que no desees usar)\n",
+        "modelo = ChatOpenAI(model=\"gpt-4o-mini\", api_key=OPENAI_API_KEY, temperature=0.7)\n",
+        "modelo = ChatGroq(model=\"llama-3.3-70b-versatile\", api_key=GROQ_API_KEY,temperature=0.7)\n",
+        "\n",
+        "respuesta = modelo.invoke(prompt).content\n",
+        "\n",
+        "# Parseamos la respuesta con el parser de salida\n",
+        "respuesta_formateada = output_parser.parse(respuesta)\n",
+        "\n",
+        "print(respuesta)\n",
+        "rprint(type(respuesta))\n",
+        "rprint(\"---\")\n",
+        "rprint(respuesta_formateada)\n",
+        "rprint(type(respuesta_formateada))\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "9uvJFFGTKQvi",
+        "outputId": "8638cdf7-ca68-45f7-e6f2-b9e308e28b7e",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 395
+        }
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "```json\n",
+            "{\n",
+            "\t\"titulo\": \"El Señor de los Anillos\",\n",
+            "\t\"director\": \"Peter Jackson\",\n",
+            "\t\"genero\": \"Aventura, Fantasía\",\n",
+            "\t\"año\": \"2001\",\n",
+            "\t\"puntuacion\": \"5\",\n",
+            "\t\"resumen\": \"Una adaptación épica y emocionante de la novela de J.R.R. Tolkien, con una narrativa rica y personajes bien desarrollados.\"\n",
+            "}\n",
+            "```\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1m<\u001b[0m\u001b[1;95mclass\u001b[0m\u001b[39m \u001b[0m\u001b[32m'str'\u001b[0m\u001b[1m>\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"font-weight: bold\">&lt;</span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff; font-weight: bold\">class</span><span style=\"color: #000000; text-decoration-color: #000000\"> </span><span style=\"color: #008000; text-decoration-color: #008000\">'str'</span><span style=\"font-weight: bold\">&gt;</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "---\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\">---\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1m{\u001b[0m\n",
+              "    \u001b[32m'titulo'\u001b[0m: \u001b[32m'El Señor de los Anillos'\u001b[0m,\n",
+              "    \u001b[32m'director'\u001b[0m: \u001b[32m'Peter Jackson'\u001b[0m,\n",
+              "    \u001b[32m'genero'\u001b[0m: \u001b[32m'Aventura, Fantasía'\u001b[0m,\n",
+              "    \u001b[32m'año'\u001b[0m: \u001b[32m'2001'\u001b[0m,\n",
+              "    \u001b[32m'puntuacion'\u001b[0m: \u001b[32m'5'\u001b[0m,\n",
+              "    \u001b[32m'resumen'\u001b[0m: \u001b[32m'Una adaptación épica y emocionante de la novela de J.R.R. Tolkien, con una narrativa rica y \u001b[0m\n",
+              "\u001b[32mpersonajes bien desarrollados.'\u001b[0m\n",
+              "\u001b[1m}\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"font-weight: bold\">{</span>\n",
+              "    <span style=\"color: #008000; text-decoration-color: #008000\">'titulo'</span>: <span style=\"color: #008000; text-decoration-color: #008000\">'El Señor de los Anillos'</span>,\n",
+              "    <span style=\"color: #008000; text-decoration-color: #008000\">'director'</span>: <span style=\"color: #008000; text-decoration-color: #008000\">'Peter Jackson'</span>,\n",
+              "    <span style=\"color: #008000; text-decoration-color: #008000\">'genero'</span>: <span style=\"color: #008000; text-decoration-color: #008000\">'Aventura, Fantasía'</span>,\n",
+              "    <span style=\"color: #008000; text-decoration-color: #008000\">'año'</span>: <span style=\"color: #008000; text-decoration-color: #008000\">'2001'</span>,\n",
+              "    <span style=\"color: #008000; text-decoration-color: #008000\">'puntuacion'</span>: <span style=\"color: #008000; text-decoration-color: #008000\">'5'</span>,\n",
+              "    <span style=\"color: #008000; text-decoration-color: #008000\">'resumen'</span>: <span style=\"color: #008000; text-decoration-color: #008000\">'Una adaptación épica y emocionante de la novela de J.R.R. Tolkien, con una narrativa rica y </span>\n",
+              "<span style=\"color: #008000; text-decoration-color: #008000\">personajes bien desarrollados.'</span>\n",
+              "<span style=\"font-weight: bold\">}</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1m<\u001b[0m\u001b[1;95mclass\u001b[0m\u001b[39m \u001b[0m\u001b[32m'dict'\u001b[0m\u001b[1m>\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"font-weight: bold\">&lt;</span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff; font-weight: bold\">class</span><span style=\"color: #000000; text-decoration-color: #000000\"> </span><span style=\"color: #008000; text-decoration-color: #008000\">'dict'</span><span style=\"font-weight: bold\">&gt;</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# 👨🏻‍🏫 **Ejercicio: Extractor de información personal de un texto**\n",
+        "\n",
+        "**Objetivo**:  \n",
+        "Crear un programa que **extraiga información estructurada** de un texto utilizando `with_structured_output()`. La información a extraer incluye:\n",
+        "\n",
+        "- Nombre completo\n",
+        "    \n",
+        "- Edad (número entero)\n",
+        "    \n",
+        "- Población (ciudad o país)\n",
+        "    \n",
+        "- Correo electrónico\n",
+        "    \n",
+        "- Lista de información adicional\n",
+        "\n",
+        "\n",
+        "**Requerimientos**:\n",
+        "\n",
+        "1. **Esquema Pydantic**:  \n",
+        "    Define una clase `InformacionExtraida` usando `pydantic.BaseModel` con los campos solicitados y sus descripciones.\n",
+        "    \n",
+        "2. **Prompt Template**:  \n",
+        "    Crea un prompt que indique al modelo de lenguaje qué información extraer y en qué formato.\n",
+        "    \n",
+        "3. **Modelo con salida estructurada**:  \n",
+        "    Usa `with_structured_output()` para configurar el modelo y garantizar que la salida cumpla con el esquema definido.\n",
+        "    \n",
+        "4. **Pruebas**:  \n",
+        "    Ejecuta el programa con el texto de ejemplo y muestra los resultados estructurados.\n",
+        "\n",
+        "### Resuelve el ejercicio en este cuaderno. Una solucion la puedes encontrar en el repositorio de esta serie de cuadernos.\n",
+        "https://github.com/juanfranbrv/curso-langchain"
+      ],
+      "metadata": {
+        "id": "vtA1eMcAOiPG"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from typing import List\n",
+        "from pydantic import BaseModel, Field\n",
+        "\n",
+        "\n",
+        "class InformacionExtraida(BaseModel):\n",
+        "    nombre: str = Field(description=\"Nombre completo de la persona\")\n",
+        "    edad: int = Field(description=\"Edad de la persona\")\n",
+        "    poblacion: str = Field(description=\"Ciudad o país de residencia\")\n",
+        "    correo: str = Field(description=\"Correo electrónico válido\")\n",
+        "    otros: List[str] = Field(description=\"Lista de información adicional relevante\")\n",
+        "\n",
+        "\n",
+        "plantilla = \"\"\"\n",
+        "Extrae esta información del texto:\n",
+        "- Nombre completo\n",
+        "- Edad (número entero)\n",
+        "- Población (ciudad/país)\n",
+        "- Correo electrónico\n",
+        "- Otra información relevante (lista)\n",
+        "\n",
+        "Texto: {texto}\n",
+        "\n",
+        "Solo devuelve la información solicitada, nada más.\n",
+        "\"\"\"\n",
+        "\n",
+        "prompt_template = PromptTemplate(\n",
+        "    template=plantilla,\n",
+        "    input_variables=[\"texto\"]\n",
+        ")\n",
+        "\n",
+        "# Instanciamos el modelo (comenta el que no desees usar)\n",
+        "modelo = ChatOpenAI(model=\"gpt-4o-mini\", api_key=OPENAI_API_KEY, temperature=0.7)\n",
+        "# modelo = ChatGroq(model=\"llama-3.3-70b-versatile\", api_key=GROQ_API_KEY,temperature=0.7)\n",
+        "\n",
+        "modelo_struct = modelo.with_structured_output(InformacionExtraida)\n",
+        "\n",
+        "\n",
+        "texto_ejemplo = \"\"\"\n",
+        "Hola, soy Carlos Pérez, tengo 28 años.\n",
+        "Vivo en Buenos Aires y mi email es carlos@example.com.\n",
+        "Trabajo como ingeniero y me gusta el fútbol.\n",
+        "\"\"\"\n",
+        "\n",
+        "prompt = prompt_template.format(texto=texto_ejemplo)\n",
+        "resultado = modelo_struct.invoke(prompt)\n",
+        "\n",
+        "rprint(resultado)\n",
+        "rprint(type(resultado))\n",
+        "print(\"\\n\\n\")\n",
+        "\n",
+        "\n",
+        "# Uso del resultado estructurado\n",
+        "print(f\"Nombre: {resultado.nombre}\")\n",
+        "print(f\"Edad: {resultado.edad}\")\n",
+        "print(f\"Población: {resultado.poblacion}\")\n",
+        "print(f\"Correo: {resultado.correo}\")\n",
+        "print(\"Otros:\")\n",
+        "for otro in resultado.otros:\n",
+        "    print(f\"  - {otro}\")\n"
+      ],
+      "metadata": {
+        "id": "uUVZekza1nRH",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 190
+        },
+        "outputId": "3b4a441b-b4e4-4d65-af7d-8e95a1302f37"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1;35mInformacionExtraida\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Pedro'\u001b[0m, \u001b[33medad\u001b[0m=\u001b[1;36m0\u001b[0m, \u001b[33mpoblacion\u001b[0m=\u001b[32m''\u001b[0m, \u001b[33mcorreo\u001b[0m=\u001b[32m'pedro@test.com'\u001b[0m, \u001b[33motros\u001b[0m=\u001b[1m[\u001b[0m\u001b[1m]\u001b[0m\u001b[1m)\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">InformacionExtraida</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Pedro'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">edad</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">0</span>, <span style=\"color: #808000; text-decoration-color: #808000\">poblacion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">''</span>, <span style=\"color: #808000; text-decoration-color: #808000\">correo</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'pedro@test.com'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">otros</span>=<span style=\"font-weight: bold\">[])</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1m<\u001b[0m\u001b[1;95mclass\u001b[0m\u001b[39m \u001b[0m\u001b[32m'__main__.InformacionExtraida'\u001b[0m\u001b[1m>\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"font-weight: bold\">&lt;</span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff; font-weight: bold\">class</span><span style=\"color: #000000; text-decoration-color: #000000\"> </span><span style=\"color: #008000; text-decoration-color: #008000\">'__main__.InformacionExtraida'</span><span style=\"font-weight: bold\">&gt;</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            "\n",
+            "Nombre: Pedro\n",
+            "Edad: 0\n",
+            "Población: \n",
+            "Correo: pedro@test.com\n",
+            "Otros:\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# 👨🏻‍🏫  **Ejercicio: Extracción de Recetas Estructuradas**\n",
+        "\n",
+        "#### **Objetivo**\n",
+        "\n",
+        "Crear un script en Python que:\n",
+        "\n",
+        "1. Extraiga el texto de una página web de recetas.\n",
+        "    \n",
+        "2. Utilice un modelo de lenguaje (LLM) para estructurar la información en un formato específico.\n",
+        "    \n",
+        "3. Muestre los resultados de forma organizada usando Pydantic.\n",
+        "\n",
+        "\n",
+        "### **Requerimientos**\n",
+        "\n",
+        "1. **Extracción de texto web**:\n",
+        "    \n",
+        "    - Usar `requests` y `BeautifulSoup` para obtener el texto crudo de una URL de receta.\n",
+        "        \n",
+        "        \n",
+        "2. **Modelado de datos con Pydantic**:\n",
+        "    \n",
+        "    - Definir 3 clases:\n",
+        "        \n",
+        "        - `Ingrediente` (nombre y cantidad).\n",
+        "            \n",
+        "        - `Paso` (número y descripción).\n",
+        "            \n",
+        "        - `Receta` (título, lista de ingredientes, lista de pasos).\n",
+        "            \n",
+        "3. **Prompt Engineering**:\n",
+        "    \n",
+        "    - Crear un prompt que indique al LLM extraer: título, ingredientes y pasos de la receta.\n",
+        "        \n",
+        "4. **Configuración del LLM**:\n",
+        "    \n",
+        "    - Usar `with_structured_output()` para garantizar que la salida del modelo coincida con el esquema `Receta`.\n",
+        "        \n",
+        "5. **Pruebas y visualización**:\n",
+        "    \n",
+        "    - Mostrar el resultado estructurado y acceder a sus campos (ej: `resultado.titulo`)."
+      ],
+      "metadata": {
+        "id": "MV0EDGiPcjeI"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "%pip install requests beautifulsoup4 -qU\n",
+        "\n",
+        "import requests\n",
+        "from bs4 import BeautifulSoup\n",
+        "\n",
+        "url = \"https://www.bonviveur.es/recetas/coles-de-bruselas-en-freidora-de-aire\"\n",
+        "url = \"https://www.directoalpaladar.com/postres/tarta-mango-postre-perfecto-para-cualquier-ocasion\"\n",
+        "\n",
+        "response = requests.get(url)\n",
+        "soup = BeautifulSoup(response.text, 'html.parser')\n",
+        "texto_raw= soup.get_text()\n",
+        "\n",
+        "# =====================\n",
+        "\n",
+        "from typing import List\n",
+        "from pydantic import BaseModel, Field\n",
+        "\n",
+        "class Ingrediente(BaseModel):\n",
+        "    nombre: str = Field(description=\"Nombre del ingrediente\")\n",
+        "    cantidad: str = Field(description=\"Cantidad del ingrediente\")\n",
+        "\n",
+        "class Paso(BaseModel):\n",
+        "    numero: int = Field(description=\"Número del paso\")\n",
+        "    descripcion: str = Field(description=\"Descripción del paso\")\n",
+        "\n",
+        "class Receta(BaseModel):\n",
+        "    titulo: str = Field(description=\"Título de la receta\")\n",
+        "    ingredientes: List[Ingrediente] = Field(description=\"Lista de ingredientes\")\n",
+        "    pasos: List[Paso] = Field(description=\"Lista de pasos\")\n",
+        "\n",
+        "plantilla = \"\"\"\n",
+        "Extrae esta información de la receta:\n",
+        "- Título\n",
+        "- Ingredientes (lista de objetos con nombre y cantidad)\n",
+        "- Pasos (lista de objetos con número y descripción)\n",
+        "\n",
+        "Receta: {texto}\n",
+        "\"\"\"\n",
+        "\n",
+        "prompt_template = PromptTemplate(\n",
+        "    template=plantilla,\n",
+        "    input_variables=[\"texto\"]\n",
+        ")\n",
+        "\n",
+        "# Instanciamos el modelo (comenta el que no desees usar)\n",
+        "modelo = ChatOpenAI(model=\"gpt-4o-mini\", api_key=OPENAI_API_KEY, temperature=0.7)\n",
+        "# modelo = ChatGroq(model=\"llama-3.3-70b-versatile\", api_key=GROQ_API_KEY,temperature=0.7)\n",
+        "\n",
+        "\n",
+        "modelo_struct = modelo.with_structured_output(Receta)\n",
+        "\n",
+        "prompt = prompt_template.format(texto=texto_raw)\n",
+        "resultado = modelo_struct.invoke(prompt)\n",
+        "\n",
+        "rprint(resultado)\n",
+        "rprint(type(resultado))\n",
+        "print(\"\\n\\n\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 936
+        },
+        "id": "AQif1bvacil_",
+        "outputId": "10c8a583-643b-4e8e-8b99-9ff4d9ff9450"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1;35mReceta\u001b[0m\u001b[1m(\u001b[0m\n",
+              "    \u001b[33mtitulo\u001b[0m=\u001b[32m'Tarta de mango, un postre perfecto para cualquier ocasión'\u001b[0m,\n",
+              "    \u001b[33mingredientes\u001b[0m=\u001b[1m[\u001b[0m\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Harina de trigo'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'150 g'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Levadura química'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'12 g'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Canela molida'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'1 cucharadita'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Azúcar'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'125 g'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Yogur griego'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'1'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Aceite de oliva'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'175 g'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Sirope de arce'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'1 cucharada'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Esencia de vainilla'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'Una pizca'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Sal'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'Una pizca'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Huevos'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'3'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Mango'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'2'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Limón \u001b[0m\u001b[32m(\u001b[0m\u001b[32mralladura\u001b[0m\u001b[32m)\u001b[0m\u001b[32m'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'1'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Queso crema \u001b[0m\u001b[32m(\u001b[0m\u001b[32mpara el frosting\u001b[0m\u001b[32m)\u001b[0m\u001b[32m'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'200 g'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Azúcar glas \u001b[0m\u001b[32m(\u001b[0m\u001b[32mpara el frosting\u001b[0m\u001b[32m)\u001b[0m\u001b[32m'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'50 g'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mIngrediente\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnombre\u001b[0m=\u001b[32m'Zumo de limón \u001b[0m\u001b[32m(\u001b[0m\u001b[32mpara el frosting\u001b[0m\u001b[32m)\u001b[0m\u001b[32m'\u001b[0m, \u001b[33mcantidad\u001b[0m=\u001b[32m'1 cucharada'\u001b[0m\u001b[1m)\u001b[0m\n",
+              "    \u001b[1m]\u001b[0m,\n",
+              "    \u001b[33mpasos\u001b[0m=\u001b[1m[\u001b[0m\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnumero\u001b[0m=\u001b[1;36m1\u001b[0m, \u001b[33mdescripcion\u001b[0m=\u001b[32m'Mezclar la harina con el azúcar, la canela, la levadura y la sal.'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\n",
+              "            \u001b[33mnumero\u001b[0m=\u001b[1;36m2\u001b[0m,\n",
+              "            \u001b[33mdescripcion\u001b[0m=\u001b[32m'En otro cuenco batir los huevos con el aceite de oliva, el yogur, el sirope de arce y la \u001b[0m\n",
+              "\u001b[32mesencia de vainilla.'\u001b[0m\n",
+              "        \u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnumero\u001b[0m=\u001b[1;36m3\u001b[0m, \u001b[33mdescripcion\u001b[0m=\u001b[32m'Agregar la ralladura de medio mango y la de limón, y remover.'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnumero\u001b[0m=\u001b[1;36m4\u001b[0m, \u001b[33mdescripcion\u001b[0m=\u001b[32m'Incorporar la harina a esta mezcla y remover bien.'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\n",
+              "            \u001b[33mnumero\u001b[0m=\u001b[1;36m5\u001b[0m,\n",
+              "            \u001b[33mdescripcion\u001b[0m=\u001b[32m'Engrasar un molde redondo desmontable con un poco de mantequilla y enharinarlo.'\u001b[0m\n",
+              "        \u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\n",
+              "            \u001b[33mnumero\u001b[0m=\u001b[1;36m6\u001b[0m,\n",
+              "            \u001b[33mdescripcion\u001b[0m=\u001b[32m'Verter la mezcla del bizcocho en el molde y hornear durante 45 minutos a 175ºC.'\u001b[0m\n",
+              "        \u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\n",
+              "            \u001b[33mnumero\u001b[0m=\u001b[1;36m7\u001b[0m,\n",
+              "            \u001b[33mdescripcion\u001b[0m=\u001b[32m'Comprobar la cocción del bizcocho con un palillo, dejar enfriar y desmoldar.'\u001b[0m\n",
+              "        \u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnumero\u001b[0m=\u001b[1;36m8\u001b[0m, \u001b[33mdescripcion\u001b[0m=\u001b[32m'Preparar el frosting mezclando los ingredientes y reservar.'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnumero\u001b[0m=\u001b[1;36m9\u001b[0m, \u001b[33mdescripcion\u001b[0m=\u001b[32m'Cortar el bizcocho en dos discos gruesos.'\u001b[0m\u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\n",
+              "            \u001b[33mnumero\u001b[0m=\u001b[1;36m10\u001b[0m,\n",
+              "            \u001b[33mdescripcion\u001b[0m=\u001b[32m'Cubrir con el frosting el primer disco, agregar dados de mango y cerrar con la otra capa \u001b[0m\n",
+              "\u001b[32mde bizcocho.'\u001b[0m\n",
+              "        \u001b[1m)\u001b[0m,\n",
+              "        \u001b[1;35mPaso\u001b[0m\u001b[1m(\u001b[0m\u001b[33mnumero\u001b[0m=\u001b[1;36m11\u001b[0m, \u001b[33mdescripcion\u001b[0m=\u001b[32m'Cubrir con otra capa de frosting y decorar con mango troceado.'\u001b[0m\u001b[1m)\u001b[0m\n",
+              "    \u001b[1m]\u001b[0m\n",
+              "\u001b[1m)\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Receta</span><span style=\"font-weight: bold\">(</span>\n",
+              "    <span style=\"color: #808000; text-decoration-color: #808000\">titulo</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Tarta de mango, un postre perfecto para cualquier ocasión'</span>,\n",
+              "    <span style=\"color: #808000; text-decoration-color: #808000\">ingredientes</span>=<span style=\"font-weight: bold\">[</span>\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Harina de trigo'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'150 g'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Levadura química'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'12 g'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Canela molida'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'1 cucharadita'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Azúcar'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'125 g'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Yogur griego'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'1'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Aceite de oliva'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'175 g'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Sirope de arce'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'1 cucharada'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Esencia de vainilla'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Una pizca'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Sal'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Una pizca'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Huevos'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'3'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Mango'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'2'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Limón (ralladura)'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'1'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Queso crema (para el frosting)'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'200 g'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Azúcar glas (para el frosting)'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'50 g'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Ingrediente</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">nombre</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Zumo de limón (para el frosting)'</span>, <span style=\"color: #808000; text-decoration-color: #808000\">cantidad</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'1 cucharada'</span><span style=\"font-weight: bold\">)</span>\n",
+              "    <span style=\"font-weight: bold\">]</span>,\n",
+              "    <span style=\"color: #808000; text-decoration-color: #808000\">pasos</span>=<span style=\"font-weight: bold\">[</span>\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">1</span>, <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Mezclar la harina con el azúcar, la canela, la levadura y la sal.'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span>\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">2</span>,\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'En otro cuenco batir los huevos con el aceite de oliva, el yogur, el sirope de arce y la </span>\n",
+              "<span style=\"color: #008000; text-decoration-color: #008000\">esencia de vainilla.'</span>\n",
+              "        <span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">3</span>, <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Agregar la ralladura de medio mango y la de limón, y remover.'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">4</span>, <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Incorporar la harina a esta mezcla y remover bien.'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span>\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">5</span>,\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Engrasar un molde redondo desmontable con un poco de mantequilla y enharinarlo.'</span>\n",
+              "        <span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span>\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">6</span>,\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Verter la mezcla del bizcocho en el molde y hornear durante 45 minutos a 175ºC.'</span>\n",
+              "        <span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span>\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">7</span>,\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Comprobar la cocción del bizcocho con un palillo, dejar enfriar y desmoldar.'</span>\n",
+              "        <span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">8</span>, <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Preparar el frosting mezclando los ingredientes y reservar.'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">9</span>, <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Cortar el bizcocho en dos discos gruesos.'</span><span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span>\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">10</span>,\n",
+              "            <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Cubrir con el frosting el primer disco, agregar dados de mango y cerrar con la otra capa </span>\n",
+              "<span style=\"color: #008000; text-decoration-color: #008000\">de bizcocho.'</span>\n",
+              "        <span style=\"font-weight: bold\">)</span>,\n",
+              "        <span style=\"color: #800080; text-decoration-color: #800080; font-weight: bold\">Paso</span><span style=\"font-weight: bold\">(</span><span style=\"color: #808000; text-decoration-color: #808000\">numero</span>=<span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">11</span>, <span style=\"color: #808000; text-decoration-color: #808000\">descripcion</span>=<span style=\"color: #008000; text-decoration-color: #008000\">'Cubrir con otra capa de frosting y decorar con mango troceado.'</span><span style=\"font-weight: bold\">)</span>\n",
+              "    <span style=\"font-weight: bold\">]</span>\n",
+              "<span style=\"font-weight: bold\">)</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "\u001b[1m<\u001b[0m\u001b[1;95mclass\u001b[0m\u001b[39m \u001b[0m\u001b[32m'__main__.Receta'\u001b[0m\u001b[1m>\u001b[0m\n"
+            ],
+            "text/html": [
+              "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"font-weight: bold\">&lt;</span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff; font-weight: bold\">class</span><span style=\"color: #000000; text-decoration-color: #000000\"> </span><span style=\"color: #008000; text-decoration-color: #008000\">'__main__.Receta'</span><span style=\"font-weight: bold\">&gt;</span>\n",
+              "</pre>\n"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "\n",
+            "\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
